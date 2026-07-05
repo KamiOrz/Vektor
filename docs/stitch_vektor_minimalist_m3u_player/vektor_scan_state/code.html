@@ -1,0 +1,227 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>VEKTOR v7.0 - Scan State</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=JetBrains+Mono:wght@100..900&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#2ae500",
+                    "primary-container": "#000000",
+                    "surface-tint": "#c6c6c6",
+                    "inverse-on-surface": "#313030",
+                    "on-background": "#e5e2e1",
+                    "tertiary-container": "#000000",
+                    "on-error-container": "#ffdad6",
+                    "surface": "#131313",
+                    "on-tertiary-container": "#168800",
+                    "secondary": "#c6c6c7",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "on-secondary-container": "#b4b5b5",
+                    "error": "#ffb4ab",
+                    "on-surface": "#e5e2e1",
+                    "error-container": "#93000a",
+                    "primary": "#c6c6c6",
+                    "on-primary-fixed": "#1b1b1b",
+                    "surface-container": "#20201f",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "surface-container-highest": "#353535",
+                    "background": "#131313",
+                    "primary-fixed-dim": "#c6c6c6",
+                    "on-primary-container": "#757575",
+                    "inverse-primary": "#5e5e5e",
+                    "surface-container-high": "#2a2a2a",
+                    "on-primary-fixed-variant": "#474747",
+                    "secondary-fixed": "#e2e2e2",
+                    "outline-variant": "#4c4546",
+                    "surface-bright": "#393939",
+                    "inverse-surface": "#e5e2e1",
+                    "on-tertiary-fixed-variant": "#095300",
+                    "on-secondary-fixed-variant": "#454747",
+                    "surface-variant": "#353535",
+                    "on-secondary": "#2f3131",
+                    "surface-dim": "#131313",
+                    "on-surface-variant": "#cfc4c5",
+                    "on-tertiary": "#053900",
+                    "on-error": "#690005",
+                    "tertiary-fixed-dim": "#2ae500",
+                    "outline": "#988e90",
+                    "primary-fixed": "#e2e2e2",
+                    "surface-container-lowest": "#0e0e0e",
+                    "tertiary-fixed": "#79ff5b",
+                    "secondary-container": "#454747",
+                    "surface-container-low": "#1c1b1b",
+                    "on-primary": "#303030",
+                    "on-tertiary-fixed": "#022100"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "32px",
+                    "margin-mobile": "16px",
+                    "safe-area": "24px",
+                    "base": "4px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "label-sm": ["JetBrains Mono"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "label-sm": ["10px", {"lineHeight": "1", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        @keyframes scan-line {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        
+        .animate-scan {
+            animation: scan-line 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        .camera-overlay {
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.85) 100%);
+        }
+
+        .corner-top-left { border-top: 2px solid #2ae500; border-left: 2px solid #2ae500; }
+        .corner-top-right { border-top: 2px solid #2ae500; border-right: 2px solid #2ae500; }
+        .corner-bottom-left { border-bottom: 2px solid #2ae500; border-left: 2px solid #2ae500; }
+        .corner-bottom-right { border-bottom: 2px solid #2ae500; border-right: 2px solid #2ae500; }
+
+        .tech-grid {
+            background-image: 
+                linear-gradient(to right, rgba(42, 229, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(42, 229, 0, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-text 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background overflow-hidden font-body-md text-body-md select-none">
+<!-- Full-screen Camera Canvas -->
+<main class="relative w-screen h-screen bg-black overflow-hidden flex flex-col items-center justify-center">
+<!-- Simulated Tech Background -->
+<div class="absolute inset-0 tech-grid opacity-40"></div>
+<div class="absolute inset-0 camera-overlay"></div>
+<!-- Dynamic Scanning Line (Global Viewfinder) -->
+<div class="absolute inset-x-0 h-px bg-tertiary shadow-[0_0_15px_#2ae500] animate-scan z-10"></div>
+<!-- Top Header (Contextual) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16">
+<div class="flex items-center gap-3">
+<img alt="VEKTOR Logo" class="w-10 h-10 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLshbtP63bJ2p0L361DHC49GYNdLDYcgmeRPmUTWU7eto_se4qVJy2eomhz61gTLIAvIA_74BbvQKhUAo1qoIWcvbBvBhNoj3nzDXDNa_JFXoaGaO5uBd8BbtJnhTiOmxFCbM_tSlaeRCGb-fSPqgGmaY_DN1sxrZhBXNflsjiJVbNYjULk-SV7F5NOAy2zOoyslAL4nVgdm4YMW4n36EpreSwoL2CkQM1enPQqmFOWQEc-1l65jy3GvWw">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tighter">VEKTOR v7.0</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+
+
+</div>
+</header>
+<!-- Central Scanning Frame -->
+<div class="relative w-72 h-72 md:w-96 md:h-96 z-20 transition-all duration-500">
+<!-- Corners -->
+<div class="absolute top-0 left-0 w-8 h-8 corner-top-left rounded-tl-lg"></div>
+<div class="absolute top-0 right-0 w-8 h-8 corner-top-right rounded-tr-lg"></div>
+<div class="absolute bottom-0 left-0 w-8 h-8 corner-bottom-left rounded-bl-lg"></div>
+<div class="absolute bottom-0 right-0 w-8 h-8 corner-bottom-right rounded-br-lg"></div>
+<!-- Viewfinder Inner Content -->
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<div class="w-full h-full border border-white/5 bg-tertiary/5 backdrop-blur-[2px] rounded-lg"></div>
+</div>
+<!-- Scanning Label -->
+<div class="absolute -bottom-12 left-0 w-full flex justify-center items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+<p class="font-label-md text-label-md text-tertiary tracking-[0.2em] animate-pulse-slow">SCANNIG...</p>
+</div>
+</div>
+<!-- Meta Data Corner (Safe Area) -->
+<div class="fixed top-24 left-margin-mobile flex flex-col gap-2 z-20">
+
+<div class="flex items-center gap-2 px-2 py-1 bg-surface-container-low border border-outline-variant rounded">
+
+</div>
+</div>
+<!-- Clipboard Context Action -->
+<div class="fixed bottom-safe-area left-0 w-full px-margin-mobile z-50 flex flex-col items-center gap-6 translate-y-0 transition-transform duration-700" id="clipboard-container">
+
+<!-- Bottom Hint -->
+<p class="font-label-sm text-label-sm text-on-surface-variant text-center opacity-60 tracking-widest">
+                ALIGN QR CODE OR PASTE M3U/HLS URL
+            </p>
+</div>
+</main>
+<!-- Micro-interaction script -->
+<script>
+        // Simulate detection logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const clipboardContainer = document.getElementById('clipboard-container');
+            
+            // Subtle floating animation for clipboard container
+            let floatY = 0;
+            let direction = 1;
+            
+            function animateFloat() {
+                floatY += 0.05 * direction;
+                if (Math.abs(floatY) > 5) direction *= -1;
+                
+                // We keep it subtle
+                // clipboardContainer.style.transform = `translateY(${floatY}px)`;
+                requestAnimationFrame(animateFloat);
+            }
+            
+            animateFloat();
+
+            // Toggle "Detection" simulation
+            setInterval(() => {
+                const scanner = document.querySelector('.corner-top-left').parentElement;
+                // Add a "blink" effect when scanning "hits" something
+                if (Math.random() > 0.8) {
+                    scanner.classList.add('scale-[1.02]', 'brightness-125');
+                    setTimeout(() => {
+                        scanner.classList.remove('scale-[1.02]', 'brightness-125');
+                    }, 150);
+                }
+            }, 3000);
+        });
+    </script>
+
+
+</body></html>

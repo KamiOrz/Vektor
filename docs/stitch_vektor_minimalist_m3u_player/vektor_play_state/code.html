@@ -1,0 +1,353 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>VEKTOR v7.0 - Play State</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        body {
+            background-color: #000000;
+            color: #e5e2e1;
+            overflow: hidden;
+            height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        .video-container {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            background: #000;
+            position: relative;
+        }
+        .glass-panel {
+            background: rgba(19, 19, 19, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(42, 229, 0, 0.3);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .grabber {
+            width: 32px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+        .laser-scan {
+            height: 1px;
+            background: #2ae500;
+            box-shadow: 0 0 8px #2ae500;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            animation: scan 4s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        .active-channel-indicator {
+            width: 2px;
+            height: 100%;
+            background-color: #2ae500;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#2ae500",
+                      "primary-container": "#000000",
+                      "surface-tint": "#c6c6c6",
+                      "inverse-on-surface": "#313030",
+                      "on-background": "#e5e2e1",
+                      "tertiary-container": "#000000",
+                      "on-error-container": "#ffdad6",
+                      "surface": "#131313",
+                      "on-tertiary-container": "#168800",
+                      "secondary": "#c6c6c7",
+                      "on-secondary-fixed": "#1a1c1c",
+                      "on-secondary-container": "#b4b5b5",
+                      "error": "#ffb4ab",
+                      "on-surface": "#e5e2e1",
+                      "error-container": "#93000a",
+                      "primary": "#c6c6c6",
+                      "on-primary-fixed": "#1b1b1b",
+                      "surface-container": "#20201f",
+                      "secondary-fixed-dim": "#c6c6c7",
+                      "surface-container-highest": "#353535",
+                      "background": "#131313",
+                      "primary-fixed-dim": "#c6c6c6",
+                      "on-primary-container": "#757575",
+                      "inverse-primary": "#5e5e5e",
+                      "surface-container-high": "#2a2a2a",
+                      "on-primary-fixed-variant": "#474747",
+                      "secondary-fixed": "#e2e2e2",
+                      "outline-variant": "#4c4546",
+                      "surface-bright": "#393939",
+                      "inverse-surface": "#e5e2e1",
+                      "on-tertiary-fixed-variant": "#095300",
+                      "on-secondary-fixed-variant": "#454747",
+                      "surface-variant": "#353535",
+                      "on-secondary": "#2f3131",
+                      "surface-dim": "#131313",
+                      "on-surface-variant": "#cfc4c5",
+                      "on-tertiary": "#053900",
+                      "on-error": "#690005",
+                      "tertiary-fixed-dim": "#2ae500",
+                      "outline": "#988e90",
+                      "primary-fixed": "#e2e2e2",
+                      "surface-container-lowest": "#0e0e0e",
+                      "tertiary-fixed": "#79ff5b",
+                      "secondary-container": "#454747",
+                      "surface-container-low": "#1c1b1b",
+                      "on-primary": "#303030",
+                      "on-tertiary-fixed": "#022100"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-desktop": "32px",
+                      "margin-mobile": "16px",
+                      "safe-area": "24px",
+                      "base": "4px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "label-sm": ["JetBrains Mono"],
+                      "headline-lg-mobile": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "label-md": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                      "label-sm": ["10px", {"lineHeight": "1", "fontWeight": "500"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-transparent flex justify-between items-center px-margin-mobile h-16 transition-opacity duration-200">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">sensors</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tighter">VEKTOR v7.0</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:text-tertiary transition-colors">settings</span>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col pt-16 relative">
+<!-- Video Player Section (16:9) -->
+<section class="video-container group">
+<div class="absolute inset-0 bg-black flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover opacity-80" data-alt="A cinematic 16:9 wide shot of a high-tech server room bathed in cool blue and deep black tones. Glowing neon green fiber optic cables snake across the floor like digital veins. In the background, large glass screens display complex streaming data and signal wave-forms. The lighting is moody and low-key, perfectly fitting a dark-mode premium interface. Sharp focus on technical details with a soft atmospheric haze." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD59D65fUPtDIirp57bw6-5w3jkvKdqn4Wa_BYR8MIFvGDHyF9DdNpNKUKrv1y2MzGP_Rr5G3-PeZnjdBzWl3Ad0bzihjAZIc825Chu_MdlAQUVSqo09WrcEQ3MuP6sqyEzO4b899mPrMlJRD9hMto1S-X8WYg_Y4DJA5glENXr3wurVZHjjKYt05FzI8Q8nS5JHWyO4PwkUZEsgQ8hFbZ-TCAZSyfahNjFDIrKDbYT__2YiGGKQlFojvCWgZKqaja7n6pgNTcNJfQ">
+<!-- Laser Scan Visual Effect -->
+<div class="laser-scan"></div>
+<!-- Playback Overlay (Active UI) -->
+<div class="absolute inset-0 flex flex-col justify-between p-safe-area opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<div class="flex justify-end">
+<div class="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded text-label-sm font-label-sm text-tertiary">
+                            4K • 60FPS • 5.1
+                        </div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-white text-4xl cursor-pointer">pause</span>
+<div class="flex-1 h-[2px] bg-white/20 relative">
+<div class="absolute top-0 left-0 h-full w-1/3 bg-tertiary"></div>
+<div class="absolute top-1/2 -translate-y-1/2 left-1/3 w-[1px] h-3 bg-white"></div>
+</div>
+<span class="font-label-md text-label-md text-white">12:45 / 45:00</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Current Channel Info Area -->
+<section class="p-safe-area space-y-2">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-tertiary uppercase tracking-widest">News</span>
+<span class="w-1 h-1 bg-outline-variant rounded-full"></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Live Now</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Global News HD</h2>
+<div class="flex items-center gap-6 pt-4 text-on-surface-variant opacity-60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">west</span>
+<span class="font-label-sm text-label-sm uppercase">Prev Channel</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm uppercase">Next Channel</span>
+<span class="material-symbols-outlined text-sm">east</span>
+</div>
+</div>
+</section>
+<!-- Gesture Hint -->
+<div class="absolute bottom-1/3 left-0 w-full flex flex-col items-center gap-2 opacity-40 animate-pulse pointer-events-none">
+<span class="material-symbols-outlined">expand_less</span>
+<p class="font-label-sm text-label-sm uppercase tracking-tighter">Swipe up for channel list</p>
+</div>
+</main>
+<!-- Bottom Sheet / Drawer -->
+<section class="fixed bottom-0 left-0 w-full z-50 glass-panel rounded-t-xl h-[60vh] flex flex-col transition-transform duration-500 ease-out translate-y-0" id="channel-drawer">
+<!-- Header / Grabber -->
+<div class="flex flex-col items-center pt-3 pb-4">
+<div class="grabber mb-6"></div>
+<!-- Category Selector -->
+<nav class="w-full px-margin-mobile overflow-x-auto no-scrollbar flex gap-8 items-center border-b border-outline-variant/30 pb-4">
+<button class="font-label-md text-label-md text-tertiary whitespace-nowrap border-b border-tertiary pb-2">News</button>
+<button class="font-label-md text-label-md text-on-surface-variant whitespace-nowrap pb-2 hover:text-white transition-colors">Sports</button>
+<button class="font-label-md text-label-md text-on-surface-variant whitespace-nowrap pb-2 hover:text-white transition-colors">Movies</button>
+<button class="font-label-md text-label-md text-on-surface-variant whitespace-nowrap pb-2 hover:text-white transition-colors">Music</button>
+<button class="font-label-md text-label-md text-on-surface-variant whitespace-nowrap pb-2 hover:text-white transition-colors">Documentary</button>
+<button class="font-label-md text-label-md text-on-surface-variant whitespace-nowrap pb-2 hover:text-white transition-colors">Kids</button>
+</nav>
+</div>
+<!-- Channel List -->
+<div class="flex-1 overflow-y-auto px-margin-mobile space-y-1 pb-20 no-scrollbar">
+<!-- Active Channel Item -->
+<div class="relative flex items-center p-4 bg-surface-container-high rounded-sm group cursor-pointer border border-tertiary/20" style="background-color: rgba(255, 255, 255, 0.05);">
+<div class="active-channel-indicator"></div>
+<div class="w-16 h-10 bg-black flex items-center justify-center border border-outline-variant mr-4 overflow-hidden">
+<img class="object-contain w-full h-full" data-alt="A minimalist logo for a news network featuring bold sans-serif typography on a pitch-black background with a thin neon green underline. The design is stark and high-contrast, representing high-performance utility and precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbtYhWyd0paE_H7_Ac-eEAMM6L8B0VHXv_kgiRJWPfQHw2dvLTDk-pUE6EOWstWe4ROWd0MrtWNnHKBzJYwnXkXq2nYL0dcyeZI82wnJwfuRH39SzuOIRGx_-vSlMSyMIU-4Ua9DawsVe6ITp34DyUwPg29iuiKTHOyYGweodn3g-THWNcjK9c1A2QEToZTBDeVBo3hlGaKCyJCXwiTQa-QS00inx0d9eCUkB2PLiRKU2Qsgg8zWtAKZhX9gtHf2g17sbYT-qJAuM">
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-tertiary font-bold">01 Global News HD</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">The World Today • Live</p>
+</div>
+<span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings: &quot;FILL&quot; 1;">play_arrow</span>
+</div>
+<!-- Other Channel Items -->
+<div class="relative flex items-center p-4 hover:bg-white/5 rounded-sm group cursor-pointer transition-colors" style="background-color: transparent;">
+<div class="w-16 h-10 bg-black flex items-center justify-center border border-outline-variant mr-4 opacity-50">
+<span class="font-label-sm text-label-sm text-on-surface-variant">CN</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface">02 Continental Net</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-40">Financial Markets Recap</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-lg opacity-0 group-hover:opacity-100 transition-opacity">play_arrow</span>
+</div>
+<div class="relative flex items-center p-4 hover:bg-white/5 rounded-sm group cursor-pointer transition-colors" style="background-color: transparent;">
+<div class="w-16 h-10 bg-black flex items-center justify-center border border-outline-variant mr-4 opacity-50">
+<span class="font-label-sm text-label-sm text-on-surface-variant">S24</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface">03 Sky 24 Stream</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-40">Weather Alert: Atlantic</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-lg opacity-0 group-hover:opacity-100 transition-opacity">play_arrow</span>
+</div>
+<div class="relative flex items-center p-4 hover:bg-white/5 rounded-sm group cursor-pointer transition-colors" style="background-color: transparent;">
+<div class="w-16 h-10 bg-black flex items-center justify-center border border-outline-variant mr-4 opacity-50">
+<span class="font-label-sm text-label-sm text-on-surface-variant">BBC</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface">04 BBC International</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-40">Technology Report</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-lg opacity-0 group-hover:opacity-100 transition-opacity">play_arrow</span>
+</div>
+<div class="relative flex items-center p-4 hover:bg-white/5 rounded-sm group cursor-pointer transition-colors" style="background-color: transparent;">
+<div class="w-16 h-10 bg-black flex items-center justify-center border border-outline-variant mr-4 opacity-50">
+<span class="font-label-sm text-label-sm text-on-surface-variant">EVN</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface">05 EVN World</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-40">Morning News Flash</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-lg opacity-0 group-hover:opacity-100 transition-opacity">play_arrow</span>
+</div>
+</div>
+</section>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full h-16 flex justify-around items-center px-safe-area pb-safe bg-surface/80 backdrop-blur-xl rounded-t-xl z-[60] border-t border-outline-variant">
+<button class="text-on-surface-variant flex flex-col items-center justify-center p-2 scale-95 active:scale-90 transition-transform hover:text-on-surface">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+<button class="text-tertiary flex flex-col items-center justify-center p-2 border-t-2 border-tertiary scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">format_list_bulleted</span>
+</button>
+<button class="text-on-surface-variant flex flex-col items-center justify-center p-2 scale-95 active:scale-90 transition-transform hover:text-on-surface">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+</button>
+
+</nav>
+<script>
+        // Simple micro-interaction for drawer dragging hint
+        const drawer = document.getElementById('channel-drawer');
+        let isDown = false;
+        let startY;
+        let scrollTop;
+
+        drawer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startY = e.pageY - drawer.offsetTop;
+        });
+        
+        drawer.addEventListener('mouseleave', () => {
+            isDown = false;
+        });
+        
+        drawer.addEventListener('mouseup', () => {
+            isDown = false;
+        });
+
+        // Toggle Drawer logic (simplified)
+        let drawerExpanded = true;
+        const grabber = document.querySelector('.grabber');
+        grabber.addEventListener('click', () => {
+            if(drawerExpanded) {
+                drawer.style.transform = 'translateY(calc(60vh - 64px))';
+                drawerExpanded = false;
+            } else {
+                drawer.style.transform = 'translateY(0)';
+                drawerExpanded = true;
+            }
+        });
+
+        // Ambient interaction for channel list
+        const listItems = document.querySelectorAll('#channel-drawer .group');
+        listItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                item.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            });
+            item.addEventListener('mouseleave', () => {
+                if(!item.querySelector('.active-channel-indicator')) {
+                    item.style.backgroundColor = 'transparent';
+                }
+            });
+        });
+    </script>
+
+
+</body></html>

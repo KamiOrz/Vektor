@@ -1,0 +1,21 @@
+.DS_Store
+
+# Xcode
+DerivedData/
+ios/Vektor/build/
+*.xcuserdata/
+*.xcuserstate
+
+# Android / Gradle
+android/.gradle/
+android/**/build/
+android/local.properties
+android/java_pid*.hprof
+
+# Node
+node_modules/
+tools/vektor-share/node_modules/
+
+# Editors
+.idea/
+.vscode/

@@ -1,0 +1,22 @@
+{
+  "name": "vektor-share",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Serve a local video directory as an M3U playlist for Vektor.",
+  "type": "module",
+  "bin": {
+    "vektor-share": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node ./src/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "mime-types": "^3.0.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
