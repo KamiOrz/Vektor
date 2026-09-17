@@ -1,5 +1,7 @@
 # Vektor
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Vektor is a minimal native M3U/HLS player for iOS and Android. It is built around a simple loop: scan or paste a playlist URL, validate it, load channels, and play locally or over the network.
 
 The repository also includes `vektor-share`, a local-network CLI for turning a video directory into an M3U playlist with an HTTP server and terminal QR code.
@@ -123,3 +125,8 @@ Vektor is not a content platform. It does not include accounts, cloud sync, reco
 
 See [docs/prd.md](docs/prd.md) and [docs/design.md](docs/design.md) for the detailed product and design specs.
 
+## License
+
+Vektor is released under the [MIT License](LICENSE). Copyright (c) 2026 KamiOrz.
+
+Third-party dependencies and externally referenced media retain their respective licenses.

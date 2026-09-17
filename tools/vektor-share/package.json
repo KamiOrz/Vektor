@@ -2,6 +2,7 @@
   "name": "vektor-share",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Serve a local video directory as an M3U playlist for Vektor.",
   "type": "module",
   "bin": {
