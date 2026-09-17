@@ -6,6 +6,16 @@ Vektor is a minimal native M3U/HLS player for iOS and Android. It is built aroun
 
 The repository also includes `vektor-share`, a local-network CLI for turning a video directory into an M3U playlist with an HTTP server and terminal QR code.
 
+## Design Preview
+
+Original design screenshots showing the scan and playback screens. The current native apps have evolved from these references; controls and layouts may differ.
+
+<p align="center">
+  <img src="docs/stitch_vektor_minimalist_m3u_player/vektor_scan_state/screen.png" alt="Vektor scan screen design preview" width="280" />
+  &nbsp;&nbsp;
+  <img src="docs/stitch_vektor_minimalist_m3u_player/vektor_play_state/screen.png" alt="Vektor playback and channel list design preview" width="280" />
+</p>
+
 ## What It Does
 
 - Scan QR codes containing HTTP/HTTPS M3U or HLS playlist URLs.
