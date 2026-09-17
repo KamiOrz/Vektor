@@ -5,9 +5,11 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +22,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -28,6 +31,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -68,6 +72,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -93,10 +99,31 @@ import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.atomic.AtomicBoolean
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.roundToInt
+import kotlin.math.absoluteValue
+import kotlinx.coroutines.delay
 
 private val VektorGreen = Color(0xFF2AE500)
 private val VektorText = Color(0xFFE5E2E1)
 private val VektorMuted = Color(0xFFCFC4C5)
+
+private data class EpisodeSwitchFeedback(
+    val id: Long,
+    val message: String,
+    val direction: Float
+)
+
+private data class PlaybackGestureFeedback(
+    val id: Long,
+    val label: String,
+    val percent: Int
+)
+
+private enum class PlaybackGestureMode {
+    Brightness,
+    Volume,
+    Episode
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -307,14 +334,46 @@ private fun PlaybackScreen(viewModel: MainViewModel) {
     val channels by viewModel.channels.collectAsState()
     val selected by viewModel.selectedChannel.collectAsState()
     val group by viewModel.selectedGroup.collectAsState()
+    val hdrCompatibilityMode by viewModel.hdrCompatibilityMode.collectAsState()
+    val fullscreenFillMode by viewModel.fullscreenFillMode.collectAsState()
     val videoShape by viewModel.playerController.videoShape.collectAsState()
     val videoAspectRatio by viewModel.playerController.videoAspectRatio.collectAsState()
     var fullscreen by remember { mutableStateOf(false) }
+    var showPlaylistOverlay by remember { mutableStateOf(false) }
+    var episodeFeedback by remember { mutableStateOf<EpisodeSwitchFeedback?>(null) }
+    var gestureFeedback by remember { mutableStateOf<PlaybackGestureFeedback?>(null) }
+    var suppressPlayerControls by remember { mutableStateOf(false) }
+    val audioManager = remember(context) { context.getSystemService(AudioManager::class.java) }
     val groups = remember(channels) { listOf("All") + channels.map { it.group }.distinct().sorted() }
     val visible = remember(channels, group) { if (group == "All") channels else channels.filter { it.group == group } }
 
+    LaunchedEffect(videoShape) {
+        if (videoShape != VideoShape.Portrait) showPlaylistOverlay = false
+    }
+    LaunchedEffect(episodeFeedback?.id) {
+        if (episodeFeedback != null) {
+            delay(720)
+            episodeFeedback = null
+        }
+    }
+    LaunchedEffect(suppressPlayerControls) {
+        if (suppressPlayerControls) {
+            delay(1100)
+            suppressPlayerControls = false
+        }
+    }
+    LaunchedEffect(gestureFeedback?.id) {
+        if (gestureFeedback != null) {
+            delay(700)
+            gestureFeedback = null
+        }
+    }
+
     BackHandler(enabled = fullscreen) {
         fullscreen = false
+    }
+    BackHandler(enabled = showPlaylistOverlay) {
+        showPlaylistOverlay = false
     }
 
     DisposableEffect(fullscreen, videoShape) {
@@ -347,50 +406,292 @@ private fun PlaybackScreen(viewModel: MainViewModel) {
         }
     }
 
+    fun switchPortraitEpisode(next: Boolean) {
+        if (channels.size < 2) return
+        val shouldContinuePlaying = viewModel.playerController.player.isPlaying
+        suppressPlayerControls = true
+        if (next) {
+            viewModel.nextChannel(autoPlay = shouldContinuePlaying)
+        } else {
+            viewModel.previousChannel(autoPlay = shouldContinuePlaying)
+        }
+        episodeFeedback = EpisodeSwitchFeedback(
+            id = System.nanoTime(),
+            message = if (next) "NEXT EPISODE" else "PREV EPISODE",
+            direction = if (next) -1f else 1f
+        )
+    }
+
+    fun setWindowBrightness(value: Float) {
+        val activity = context as? ComponentActivity ?: return
+        val clamped = value.coerceIn(0.02f, 1f)
+        val params = WindowManager.LayoutParams().apply {
+            copyFrom(activity.window.attributes)
+            screenBrightness = clamped
+        }
+        activity.window.attributes = params
+        gestureFeedback = PlaybackGestureFeedback(
+            id = System.nanoTime(),
+            label = "BRIGHTNESS",
+            percent = (clamped * 100).roundToInt()
+        )
+    }
+
+    fun setMusicVolume(value: Int) {
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        val clamped = value.coerceIn(0, maxVolume)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, clamped, 0)
+        gestureFeedback = PlaybackGestureFeedback(
+            id = System.nanoTime(),
+            label = "VOLUME",
+            percent = ((clamped.toFloat() / maxVolume.toFloat()) * 100f).roundToInt()
+        )
+    }
+
     if (fullscreen) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .pointerInput(videoShape, fullscreen, channels.size) {
+                    var mode = PlaybackGestureMode.Episode
+                    var totalX = 0f
+                    var totalY = 0f
+                    var initialBrightness = 0.5f
+                    var initialVolume = 0
+                    detectDragGestures(
+                        onDragStart = { start ->
+                            totalX = 0f
+                            totalY = 0f
+                            val width = size.width.toFloat().coerceAtLeast(1f)
+                            val portraitEdgeWidth = width * 0.22f
+                            mode = if (videoShape == VideoShape.Portrait) {
+                                when {
+                                    start.x <= portraitEdgeWidth -> PlaybackGestureMode.Brightness
+                                    start.x >= width - portraitEdgeWidth -> PlaybackGestureMode.Volume
+                                    else -> PlaybackGestureMode.Episode
+                                }
+                            } else {
+                                if (start.x < width / 2f) PlaybackGestureMode.Brightness else PlaybackGestureMode.Volume
+                            }
+                            val activity = context as? ComponentActivity
+                            initialBrightness = activity?.window?.attributes?.screenBrightness
+                                ?.takeIf { it >= 0f }
+                                ?: 0.5f
+                            initialVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                        },
+                        onDragEnd = {
+                            if (mode == PlaybackGestureMode.Episode) {
+                                if (
+                                    videoShape == VideoShape.Portrait &&
+                                    totalY.absoluteValue > 130f &&
+                                    totalY.absoluteValue > totalX.absoluteValue * 1.35f
+                                ) {
+                                    switchPortraitEpisode(next = totalY < 0f)
+                                }
+                            }
+                        }
+                    ) { _, dragAmount ->
+                        totalX += dragAmount.x
+                        totalY += dragAmount.y
+                        if (mode == PlaybackGestureMode.Episode) return@detectDragGestures
+                        if (totalY.absoluteValue < totalX.absoluteValue * 1.15f) return@detectDragGestures
+                        val delta = -totalY / size.height.toFloat().coerceAtLeast(1f)
+                        when (mode) {
+                            PlaybackGestureMode.Brightness -> {
+                                setWindowBrightness(initialBrightness + delta * 1.15f)
+                            }
+                            PlaybackGestureMode.Volume -> {
+                                val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                                setMusicVolume(initialVolume + (delta * maxVolume).roundToInt())
+                            }
+                            PlaybackGestureMode.Episode -> Unit
+                        }
+                    }
+                }
+        ) {
             VideoSection(
                 playerController = viewModel.playerController,
                 fullscreen = true,
+                fillScreen = fullscreenFillMode,
+                suppressControls = suppressPlayerControls && videoShape == VideoShape.Portrait,
                 onFullscreenChange = { fullscreen = it },
                 modifier = Modifier.fillMaxSize()
             )
+            FullscreenFillToggle(
+                fillScreen = fullscreenFillMode,
+                onClick = { viewModel.setFullscreenFillMode(!fullscreenFillMode) },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 18.dp, end = 18.dp)
+            )
+            EpisodeSwitchHint(
+                feedback = episodeFeedback,
+                selected = selected,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            PlaybackGestureHint(
+                feedback = gestureFeedback,
+                modifier = Modifier.align(Alignment.Center)
+            )
         }
     } else {
-        Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
-            PlaybackHeader(onReset = viewModel::resetToScan)
-            AdaptiveVideoContainer(
-                videoShape = videoShape,
-                aspectRatio = videoAspectRatio
-            ) { videoModifier ->
-                VideoSection(
-                    playerController = viewModel.playerController,
-                    fullscreen = false,
-                    onFullscreenChange = { fullscreen = it },
-                    modifier = videoModifier
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                PlaybackHeader(onReset = viewModel::resetToScan)
+                AdaptiveVideoContainer(
+                    videoShape = videoShape,
+                    aspectRatio = videoAspectRatio
+                ) { videoModifier ->
+                    VideoSection(
+                        playerController = viewModel.playerController,
+                        fullscreen = false,
+                        fillScreen = false,
+                        suppressControls = false,
+                        onFullscreenChange = { fullscreen = it },
+                        modifier = videoModifier
+                    )
+                }
+                if (videoShape == VideoShape.Portrait) {
+                    CurrentChannelCompact(
+                        selected = selected,
+                        onPrevious = viewModel::previousChannel,
+                        onNext = viewModel::nextChannel,
+                        hdrCompatibilityMode = hdrCompatibilityMode,
+                        onToggleHdrCompatibility = { viewModel.setHdrCompatibilityMode(!hdrCompatibilityMode) }
+                    )
+                    PortraitPlaylistTrigger(
+                        count = visible.size,
+                        selectedGroup = group,
+                        onClick = { showPlaylistOverlay = true }
+                    )
+                    Spacer(Modifier.weight(1f))
+                } else {
+                    CurrentChannelPanel(
+                        selected = selected,
+                        onPrevious = viewModel::previousChannel,
+                        onNext = viewModel::nextChannel,
+                        hdrCompatibilityMode = hdrCompatibilityMode,
+                        onToggleHdrCompatibility = { viewModel.setHdrCompatibilityMode(!hdrCompatibilityMode) }
+                    )
+                    ChannelListPanel(
+                        groups = groups,
+                        selectedGroup = group,
+                        channels = visible,
+                        selected = selected,
+                        onGroup = viewModel::setSelectedGroup,
+                        onChannel = viewModel::select,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            if (videoShape == VideoShape.Portrait && showPlaylistOverlay) {
+                PlaylistOverlay(
+                    groups = groups,
+                    selectedGroup = group,
+                    channels = visible,
+                    selected = selected,
+                    onDismiss = { showPlaylistOverlay = false },
+                    onGroup = viewModel::setSelectedGroup,
+                    onChannel = {
+                        viewModel.select(it)
+                        showPlaylistOverlay = false
+                    }
                 )
             }
-            if (videoShape == VideoShape.Portrait) {
-                CurrentChannelCompact(
-                    selected = selected,
-                    onPrevious = viewModel::previousChannel,
-                    onNext = viewModel::nextChannel
-                )
-            } else {
-                CurrentChannelPanel(
-                    selected = selected,
-                    onPrevious = viewModel::previousChannel,
-                    onNext = viewModel::nextChannel
-                )
-            }
-            ChannelListPanel(
-                groups = groups,
-                selectedGroup = group,
-                channels = visible,
-                selected = selected,
-                onGroup = viewModel::setSelectedGroup,
-                onChannel = viewModel::select,
-                modifier = Modifier.weight(1f)
+        }
+    }
+}
+
+@Composable
+private fun EpisodeSwitchHint(
+    feedback: EpisodeSwitchFeedback?,
+    selected: Channel?,
+    modifier: Modifier = Modifier
+) {
+    val alpha by animateFloatAsState(
+        targetValue = if (feedback == null) 0f else 1f,
+        animationSpec = tween(durationMillis = 180),
+        label = "episodeHintAlpha"
+    )
+    val offset by animateFloatAsState(
+        targetValue = if (feedback == null) 22f * (feedback?.direction ?: 1f) else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "episodeHintOffset"
+    )
+    if (feedback != null || alpha > 0.01f) {
+        Column(
+            modifier
+                .graphicsLayer {
+                    this.alpha = alpha
+                    translationY = offset
+                }
+                .background(Color.Black.copy(alpha = 0.46f))
+                .border(1.dp, VektorGreen.copy(alpha = 0.55f))
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                feedback?.message ?: "",
+                color = VektorGreen,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Text(
+                selected?.title ?: "",
+                color = VektorText,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .widthIn(max = 240.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaybackGestureHint(
+    feedback: PlaybackGestureFeedback?,
+    modifier: Modifier = Modifier
+) {
+    val alpha by animateFloatAsState(
+        targetValue = if (feedback == null) 0f else 1f,
+        animationSpec = tween(durationMillis = 160),
+        label = "playbackGestureHintAlpha"
+    )
+    if (feedback != null || alpha > 0.01f) {
+        Column(
+            modifier
+                .graphicsLayer { this.alpha = alpha }
+                .background(Color.Black.copy(alpha = 0.42f))
+                .border(1.dp, VektorGreen.copy(alpha = 0.50f))
+                .padding(horizontal = 18.dp, vertical = 13.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                feedback?.label ?: "",
+                color = VektorGreen,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Text(
+                "${feedback?.percent ?: 0}%",
+                color = VektorText,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
@@ -519,6 +820,8 @@ private fun AdaptiveVideoContainer(
 private fun VideoSection(
     playerController: PlayerController,
     fullscreen: Boolean,
+    fillScreen: Boolean = false,
+    suppressControls: Boolean = false,
     onFullscreenChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -527,8 +830,13 @@ private fun VideoSection(
             PlayerView(ctx).apply {
                 player = playerController.player
                 useController = true
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                resizeMode = if (fillScreen) {
+                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                } else {
+                    AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
                 controllerShowTimeoutMs = 3000
+                controllerAutoShow = !suppressControls
                 setShowFastForwardButton(false)
                 setShowRewindButton(false)
                 setShowNextButton(false)
@@ -541,6 +849,9 @@ private fun VideoSection(
                     onFullscreenChange(isFullscreen)
                 }
                 setFullscreenButtonState(fullscreen)
+                if (suppressControls) {
+                    hideController()
+                }
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -550,8 +861,13 @@ private fun VideoSection(
         update = {
             it.player = playerController.player
             it.useController = true
-            it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            it.resizeMode = if (fillScreen) {
+                AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            } else {
+                AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
             it.controllerShowTimeoutMs = 3000
+            it.controllerAutoShow = !suppressControls
             it.setShowFastForwardButton(false)
             it.setShowRewindButton(false)
             it.setShowNextButton(false)
@@ -563,6 +879,9 @@ private fun VideoSection(
                 onFullscreenChange(isFullscreen)
             }
             it.setFullscreenButtonState(fullscreen)
+            if (suppressControls) {
+                it.hideController()
+            }
         },
         modifier = modifier.background(Color.Black)
     )
@@ -572,7 +891,9 @@ private fun VideoSection(
 private fun CurrentChannelCompact(
     selected: Channel?,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    hdrCompatibilityMode: Boolean,
+    onToggleHdrCompatibility: () -> Unit
 ) {
     Row(
         Modifier
@@ -591,6 +912,11 @@ private fun CurrentChannelCompact(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            HdrCompatibilityToggle(
+                enabled = hdrCompatibilityMode,
+                onClick = onToggleHdrCompatibility,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ChannelActionButton("PREV", onPrevious, Modifier.widthIn(min = 66.dp), active = false)
@@ -600,10 +926,68 @@ private fun CurrentChannelCompact(
 }
 
 @Composable
+private fun PortraitPlaylistTrigger(
+    count: Int,
+    selectedGroup: String,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Color.Black)
+            .clickable(onClick = onClick)
+            .border(1.dp, Color.White.copy(alpha = 0.12f))
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("EPISODES", color = VektorGreen, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text("  •  $selectedGroup", color = VektorMuted.copy(alpha = 0.72f), fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+        Spacer(Modifier.weight(1f))
+        Text("$count ITEMS", color = VektorMuted.copy(alpha = 0.72f), fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun PlaylistOverlay(
+    groups: List<String>,
+    selectedGroup: String,
+    channels: List<Channel>,
+    selected: Channel?,
+    onDismiss: () -> Unit,
+    onGroup: (String) -> Unit,
+    onChannel: (Channel) -> Unit
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.42f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        ChannelListPanel(
+            groups = groups,
+            selectedGroup = selectedGroup,
+            channels = channels,
+            selected = selected,
+            onGroup = onGroup,
+            onChannel = onChannel,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.56f)
+                .clickable {},
+            backgroundAlpha = 0.82f,
+            title = "EPISODES"
+        )
+    }
+}
+
+@Composable
 private fun CurrentChannelPanel(
     selected: Channel?,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    hdrCompatibilityMode: Boolean,
+    onToggleHdrCompatibility: () -> Unit
 ) {
     Column(
         Modifier
@@ -630,7 +1014,62 @@ private fun CurrentChannelPanel(
         ) {
             ChannelActionButton("PREV", onPrevious, Modifier.weight(1f), active = false)
             ChannelActionButton("NEXT", onNext, Modifier.weight(1f), active = true)
+            HdrCompatibilityToggle(
+                enabled = hdrCompatibilityMode,
+                onClick = onToggleHdrCompatibility,
+                modifier = Modifier.weight(1f)
+            )
         }
+    }
+}
+
+@Composable
+private fun HdrCompatibilityToggle(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier
+            .height(36.dp)
+            .clickable(onClick = onClick)
+            .background(if (enabled) VektorGreen.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.05f))
+            .border(1.dp, if (enabled) VektorGreen.copy(alpha = 0.70f) else Color.White.copy(alpha = 0.16f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (enabled) "HDR COMPAT" else "HDR RAW",
+            color = if (enabled) VektorGreen else VektorMuted,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun FullscreenFillToggle(
+    fillScreen: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier
+            .height(34.dp)
+            .background(Color.Black.copy(alpha = 0.42f))
+            .border(1.dp, Color.White.copy(alpha = 0.20f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (fillScreen) "FILL" else "FIT",
+            color = if (fillScreen) VektorGreen else VektorMuted,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp
+        )
     }
 }
 
@@ -703,19 +1142,21 @@ private fun ChannelListPanel(
     selected: Channel?,
     onGroup: (String) -> Unit,
     onChannel: (Channel) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backgroundAlpha: Float = 1f,
+    title: String = "PLAYLIST"
 ) {
     Column(
         modifier
             .fillMaxWidth()
-            .background(Color(0xFF101010))
+            .background(Color(0xFF101010).copy(alpha = backgroundAlpha))
             .border(1.dp, Color.White.copy(alpha = 0.10f))
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("PLAYLIST", color = VektorText, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(title, color = VektorText, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Spacer(Modifier.weight(1f))
             Text("${channels.size} ITEMS", color = VektorMuted.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace, fontSize = 11.sp)
         }

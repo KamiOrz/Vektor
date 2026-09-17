@@ -3,45 +3,75 @@ import SwiftUI
 
 struct PlaybackView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var showingPlaylistOverlay = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            PlaybackHeader {
-                model.resetToScan()
-            }
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                PlaybackHeader {
+                    model.resetToScan()
+                }
 
-            AdaptiveVideoContainer(
-                videoShape: model.playerService.videoShape,
-                aspectRatio: model.playerService.videoAspectRatio
-            ) {
-                VideoSection(player: model.playerService.player)
-            }
+                AdaptiveVideoContainer(
+                    videoShape: model.playerService.videoShape,
+                    aspectRatio: model.playerService.videoAspectRatio
+                ) {
+                    VideoSection(player: model.playerService.player)
+                }
 
-            if model.playerService.videoShape == .portrait {
-                CurrentChannelCompact(
+                if model.playerService.videoShape == .portrait {
+                    CurrentChannelCompact(
+                        selected: model.selectedChannel,
+                        onPrevious: model.previousChannel,
+                        onNext: model.nextChannel
+                    )
+                    PortraitPlaylistTrigger(
+                        count: model.visibleChannels.count,
+                        selectedGroup: model.selectedGroup
+                    ) {
+                        showingPlaylistOverlay = true
+                    }
+                    Spacer(minLength: 0)
+                } else {
+                    CurrentChannelPanel(
+                        selected: model.selectedChannel,
+                        onPrevious: model.previousChannel,
+                        onNext: model.nextChannel
+                    )
+                    ChannelListPanel(
+                        groups: model.groups,
+                        selectedGroup: model.selectedGroup,
+                        channels: model.visibleChannels,
+                        selected: model.selectedChannel,
+                        onGroup: { model.selectedGroup = $0 },
+                        onChannel: model.select
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if model.playerService.videoShape == .portrait, showingPlaylistOverlay {
+                PlaylistOverlay(
+                    groups: model.groups,
+                    selectedGroup: model.selectedGroup,
+                    channels: model.visibleChannels,
                     selected: model.selectedChannel,
-                    onPrevious: model.previousChannel,
-                    onNext: model.nextChannel
-                )
-            } else {
-                CurrentChannelPanel(
-                    selected: model.selectedChannel,
-                    onPrevious: model.previousChannel,
-                    onNext: model.nextChannel
+                    onDismiss: { showingPlaylistOverlay = false },
+                    onGroup: { model.selectedGroup = $0 },
+                    onChannel: { channel in
+                        model.select(channel)
+                        showingPlaylistOverlay = false
+                    }
                 )
             }
-
-            ChannelListPanel(
-                groups: model.groups,
-                selectedGroup: model.selectedGroup,
-                channels: model.visibleChannels,
-                selected: model.selectedChannel,
-                onGroup: { model.selectedGroup = $0 },
-                onChannel: model.select
-            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.ignoresSafeArea())
+        .onChange(of: model.playerService.videoShape) { _, shape in
+            if shape != .portrait {
+                showingPlaylistOverlay = false
+            }
+        }
     }
 }
 
@@ -153,6 +183,70 @@ private struct CurrentChannelCompact: View {
     }
 }
 
+private struct PortraitPlaylistTrigger: View {
+    let count: Int
+    let selectedGroup: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text("EPISODES")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.vektorGreen)
+                Text("•")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.vektorMuted.opacity(0.72))
+                Text(selectedGroup)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.vektorMuted.opacity(0.72))
+                    .lineLimit(1)
+                Spacer()
+                Text("\(count) ITEMS")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.vektorMuted.opacity(0.72))
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 46)
+            .background(Color.black)
+            .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PlaylistOverlay: View {
+    let groups: [String]
+    let selectedGroup: String
+    let channels: [Channel]
+    let selected: Channel?
+    let onDismiss: () -> Void
+    let onGroup: (String) -> Void
+    let onChannel: (Channel) -> Void
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(0.42)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+
+            ChannelListPanel(
+                groups: groups,
+                selectedGroup: selectedGroup,
+                channels: channels,
+                selected: selected,
+                onGroup: onGroup,
+                onChannel: onChannel,
+                backgroundOpacity: 0.82,
+                title: "EPISODES"
+            )
+            .frame(height: UIScreen.main.bounds.height * 0.56)
+            .onTapGesture {}
+        }
+        .transition(.opacity)
+    }
+}
+
 private struct CurrentChannelPanel: View {
     let selected: Channel?
     let onPrevious: () -> Void
@@ -234,11 +328,13 @@ private struct ChannelListPanel: View {
     let selected: Channel?
     let onGroup: (String) -> Void
     let onChannel: (Channel) -> Void
+    var backgroundOpacity: Double = 1
+    var title: String = "PLAYLIST"
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("PLAYLIST")
+                Text(title)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.vektorText)
                 Spacer()
@@ -281,7 +377,7 @@ private struct ChannelListPanel: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.vektorListPanel)
+        .background(Color.vektorListPanel.opacity(backgroundOpacity))
         .overlay(Rectangle().stroke(Color.white.opacity(0.10), lineWidth: 1))
     }
 }

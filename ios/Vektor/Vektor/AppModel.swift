@@ -61,6 +61,7 @@ final class AppModel: ObservableObject {
 
     func load(url: URL, source: String, clearLastOnFailure: Bool = true) async {
         loadingState = .loading(source)
+        let previousURL = persistence.loadLastURL()
         do {
             let parsed = try await m3uService.validateAndParse(url: url)
             channels = parsed
@@ -69,8 +70,13 @@ final class AppModel: ObservableObject {
             persistence.saveLastURL(url)
             persistence.upsertScanHistory(url: url, title: historyTitle(for: url))
             scanHistory = persistence.loadScanHistory()
-            let restoredIndex = persistence.loadLastChannelIndex()
-            let initial = parsed.first(where: { $0.index == restoredIndex }) ?? parsed[0]
+            let initial: Channel
+            if previousURL == url {
+                let restoredIndex = persistence.loadLastChannelIndex()
+                initial = parsed.first(where: { $0.index == restoredIndex }) ?? parsed[0]
+            } else {
+                initial = parsed[0]
+            }
             select(initial)
             loadingState = .idle
         } catch {

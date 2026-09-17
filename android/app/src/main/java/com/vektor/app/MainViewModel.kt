@@ -39,9 +39,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _scanHistory = MutableStateFlow<List<ScanHistoryItem>>(emptyList())
     val scanHistory: StateFlow<List<ScanHistoryItem>> = _scanHistory
 
+    private val _hdrCompatibilityMode = MutableStateFlow(true)
+    val hdrCompatibilityMode: StateFlow<Boolean> = _hdrCompatibilityMode
+
+    private val _fullscreenFillMode = MutableStateFlow(true)
+    val fullscreenFillMode: StateFlow<Boolean> = _fullscreenFillMode
+
     fun bootstrap() {
         viewModelScope.launch {
             _scanHistory.value = preferences.loadScanHistory()
+            val hdrMode = preferences.loadHdrCompatibilityMode()
+            _hdrCompatibilityMode.value = hdrMode
+            playerController.setHdrCompatibilityMode(hdrMode)
+            _fullscreenFillMode.value = preferences.loadFullscreenFillMode()
             val url = preferences.loadLastUrl()
             if (url == null) {
                 _screen.value = AppScreen.Scan
@@ -76,24 +86,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedGroup.value = group
     }
 
-    fun select(channel: Channel) {
+    fun setHdrCompatibilityMode(enabled: Boolean) {
+        _hdrCompatibilityMode.value = enabled
+        playerController.setHdrCompatibilityMode(enabled)
+        viewModelScope.launch { preferences.saveHdrCompatibilityMode(enabled) }
+    }
+
+    fun setFullscreenFillMode(enabled: Boolean) {
+        _fullscreenFillMode.value = enabled
+        viewModelScope.launch { preferences.saveFullscreenFillMode(enabled) }
+    }
+
+    fun select(channel: Channel, autoPlay: Boolean = false) {
         _selectedChannel.value = channel
-        playerController.load(channel)
+        playerController.load(channel, autoPlay = autoPlay)
         viewModelScope.launch { preferences.saveLastChannelIndex(channel.index) }
     }
 
-    fun nextChannel() {
+    fun nextChannel(autoPlay: Boolean = false) {
         val list = _channels.value
         val current = _selectedChannel.value ?: return
         val index = list.indexOf(current)
-        if (index >= 0) select(list[(index + 1) % list.size])
+        if (index >= 0) select(list[(index + 1) % list.size], autoPlay = autoPlay)
     }
 
-    fun previousChannel() {
+    fun previousChannel(autoPlay: Boolean = false) {
         val list = _channels.value
         val current = _selectedChannel.value ?: return
         val index = list.indexOf(current)
-        if (index >= 0) select(list[(index - 1 + list.size) % list.size])
+        if (index >= 0) select(list[(index - 1 + list.size) % list.size], autoPlay = autoPlay)
     }
 
     fun resetToScan() {
@@ -126,6 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun load(url: String, message: String, clearLastOnFailure: Boolean = true) {
         _loadingState.value = LoadingState.Loading(message)
+        val previousUrl = preferences.loadLastUrl()
         val result = withContext(Dispatchers.IO) { repository.validateAndParse(url) }
         result
             .onSuccess { parsed ->
@@ -135,8 +157,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 preferences.saveLastUrl(url)
                 preferences.upsertScanHistory(url, historyTitle(url))
                 _scanHistory.value = preferences.loadScanHistory()
-                val lastIndex = preferences.loadLastChannelIndex()
-                select(parsed.firstOrNull { it.index == lastIndex } ?: parsed.first())
+                val initial = if (previousUrl == url) {
+                    val lastIndex = preferences.loadLastChannelIndex()
+                    parsed.firstOrNull { it.index == lastIndex } ?: parsed.first()
+                } else {
+                    parsed.first()
+                }
+                select(initial)
                 _loadingState.value = LoadingState.Idle
             }
             .onFailure {

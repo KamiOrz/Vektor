@@ -1,6 +1,7 @@
 package com.vektor.app
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -13,6 +14,8 @@ class PreferenceStore(private val context: Context) {
     private val lastUrlKey = stringPreferencesKey("last_valid_m3u_url")
     private val lastChannelIndexKey = intPreferencesKey("last_channel_index")
     private val scanHistoryKey = stringPreferencesKey("scan_history")
+    private val hdrCompatibilityModeKey = booleanPreferencesKey("hdr_compatibility_mode")
+    private val fullscreenFillModeKey = booleanPreferencesKey("fullscreen_fill_mode")
 
     suspend fun loadLastUrl(): String? = context.dataStore.data.first()[lastUrlKey]
 
@@ -28,6 +31,20 @@ class PreferenceStore(private val context: Context) {
 
     suspend fun saveLastChannelIndex(index: Int) {
         context.dataStore.edit { it[lastChannelIndexKey] = index }
+    }
+
+    suspend fun loadHdrCompatibilityMode(): Boolean =
+        context.dataStore.data.first()[hdrCompatibilityModeKey] ?: true
+
+    suspend fun saveHdrCompatibilityMode(enabled: Boolean) {
+        context.dataStore.edit { it[hdrCompatibilityModeKey] = enabled }
+    }
+
+    suspend fun loadFullscreenFillMode(): Boolean =
+        context.dataStore.data.first()[fullscreenFillModeKey] ?: true
+
+    suspend fun saveFullscreenFillMode(enabled: Boolean) {
+        context.dataStore.edit { it[fullscreenFillModeKey] = enabled }
     }
 
     suspend fun loadScanHistory(): List<ScanHistoryItem> =
